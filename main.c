@@ -1,189 +1,238 @@
- #include <stdio.h>
-// #include <conio.h>
-// #include <dos.h>
-// #include <graphics.h>
-// #include <stdlib.h>
-// union REGS i, o;
-// int left = 265, top = 250;
+#include<stdio.h>
+#include <stdlib.h>
 
-// void initialize_graphics_mode()
-// {
-//   int gd = DETECT, gm, error;
+//the board can be random or read from the file (specification 2.2)
+typedef enum boardType {
+    ReadFromFile, 
+    Randomized,
+    Error
+} boardType;
 
-//   initgraph(&gd,&gm,"C:\\TC\\BGI");
+//randomizes the board
+int fillBoardRandom(int width, int height, char** arr){
+    srand(time(NULL));
+    int r = rand();
+    for(int i = 0; i<height; i++){
+        for(int j = 0; j<width; j++){
+            if(r%3!=0){
+                arr[i][j] = ' ';
+                printf("%c",arr[i][j]);
+            }
+            else{
+                arr[i][j] = '@';
+            }
+            r = rand();
+        }
+    }
+    //TO DO ERRORS
+    if(1<0){
+        return 0;
+    }
+    return 1;
+}
+//inputs the board from the file
+int fillBoardFromFile(int width, int height, char** arr, FILE *fp){
+    int status = 1;
+    char curr = ' ';
+    if(fp== NULL){
+        printf("could not find file, please try again! \n");
+        return 1;
+    }
+    //read
+    for(int i = 0; i<height; i++){
+        for(int j = 0; j<width; j++){
+            curr = fgetc(fp);
+            if(curr == ' ')
+                arr[i][j] = ' ';
+            else if(curr == '@')
+                arr[i][j] = '@';
+            else
+                j--;
+            
+        }
+    }
+    status = fclose(fp);
+    if(status != 0)
+        return 1;
+    return 0;
+}
+//prints the board
+void printBoard(int width, int height, char**board){
+    printf("\n");
+    for (int i = 0; i < width+2; i++){
+        printf("-");
+    }
+    printf("\n");
+    for(int i = 0; i<height; i++){
+        printf("|");
+        for(int j = 0; j<width; j++){
+            printf("%c", board[i][j]);
+        }
+        printf("|\n");
+    }
+    for (int i = 0; i < width+2; i++){
+        printf("-");
+    }
+}
+//saves current board to the file
+int saveBoardInFile(int width, int height, char** board, FILE *fp){
+    int status = 1; 
+    for(int i = 0; i<height; i++){
+        for(int j = 0; j<width; j++){
+            fputc(board[i][j], fp);
+        }
+        fputc('\n', fp);
+    }
+    status = fclose(fp);
+    if(status != 0)
+        return 1;
+    return 0;
+}
+//calculates the next state of the cell
+char CellNextState(char current, int neighbourCount){
+    return ((neighbourCount == 2 && current == '@') || neighbourCount == 3) ? '@' : ' ';
+}
+//moves on to the next state
+void nextBoard(int width, int height, char** board){
+    int neighbourCount = 0;
+    
+    for(int i = 0; i<height; i++){
+        for(int j = 0; j<width; j++){
+            if (i>0)
+                neighbourCount += board[i-1][j] == '@';
+            if (j>0)
+                neighbourCount += board[i][j-1] == '@';
+            if(i<(height-1))
+                neighbourCount += board[i+1][j] == '@';
+            if(j<(width-1))
+                neighbourCount += board[i][j+1] == '@';
+            board[i][j] = CellNextState(board[i][j], neighbourCount);
+            neighbourCount = 0;
+        }
+    }
+}
+//counts the cells that are alive
+int aliveCellCount(int width, int height, char** board){
+    int aliveCellsCount = 0;
+    for(int i = 0; i<height; i++){
+        for(int j = 0; j<width; j++){
+            aliveCellsCount += (board[i][j] == '@');
+        }
+    }
+    return aliveCellsCount;
+}
+//appends the current board to the archive file
+int addToArchive(int width, int height, char** board){
+    FILE *fp;
+    fp = fopen("archive.txt", "a");
+        if(fp== NULL){
+            printf("action could not be saved!!");
+            return 0;
+        }
+    
+    int status = 1; 
+    fputc('\n', fp);
+    for(int i = 0; i<height; i++){
+        for(int j = 0; j<width; j++){
+            fputc(board[i][j], fp);
+        }
+        fputc('\n', fp);
+    }
 
-//   error = graphresult();
+    status = fclose(fp);
+    if(status != 0)
+        return 1;
+    return 0;
+}
 
-//   if (error != grOk)
-//   {
-//     perror("Error ");
-//     printf("Press any key to exit...\n");
-//     getch();
-//     exit(EXIT_FAILURE);
-//   }
-// }
 
-// void showmouseptr()
-// {
-//   i.x.ax = 1;
-//   int86(0x33, &i, &o);
-// }
 
-// void hidemouseptr()
-// {
-//   i.x.ax = 2;
-//   int86(0x33, &i, &o);
-// }
+//displays the main rules in the console
+void displayRules(){
+    printf("Welcome to the two-dimentional world of the Game of Life!!\n");
+    printf("Here, small creatures called \'cells\' live neighbouring each other\n");
+    printf("They might look simple, but they are just like you in social situations!\n");
+    printf("If they have less than 2 neighbours, they die of loneliness\n");
+    printf("But if they have more than 3 neighbours, they die of social anxiety\n");
+    printf("Otherwise, they are okay!\n");
+    printf("Oh, and also, with the right amount of neighbours (exactly 3), a dead cell can come alive!!\n");
+    printf("As a three-dimentional being, you can observe their life by looking at their plane of existance step-by-step.\n");
+    printf("So, are you ready to explore the wonderous world of the game of life?\n");
+    printf("Then follow these instructions. \n\n\n");
+}
 
-// void getmousepos(int *x,int *y)
-// {
-//   i.x.ax = 3;
-//   int86(0x33, &i, &o);
+//asks the user for the instructions
+boardType instructions(int *width, int* height){
+    char c;
+    printf("First, input the size of the world, that your cells live in (width,height) : ");
+    scanf("(%d,%d)", width, height);
+    printf("\nThen, write F if you have already prepared the initial state of your cells in the File, or write R if you want to view a random Game of Life: ");
+    scanf(" %c", &c);
+    // if(c=='F' || c=='f'){
+    //     printf("please make sure your board")
+    // }
+    return (c=='F'|| c=='f') ? ReadFromFile : (c=='R' || c=='r') ? Randomized : Error;
+}
+//fill the board according to the instructions
+int fillBoard(int width, int height, char** board, boardType instruction){
+    FILE *fp;
+    if (instruction == ReadFromFile){
+        fp = fopen("input_board.txt", "r");
+        if(fp== NULL){
+            printf("could not read from the file, please make sure you have correctly inputed the board!");
+            return 0;
+        }
+        printf("The board read from your file: \n");
+        fillBoardFromFile(width, height, board, fp);
 
-//   *x = o.x.cx;
-//   *y = o.x.dx;
-// }
+    }
+    else if(instruction == Randomized){
+        printf("The randomized world:\n");
+        fillBoardRandom(width, height, board);
+        fp = fopen("input_board.txt", "w");
+        saveBoardInFile(width, height, board, fp);
+        printBoard(width, height, board);
+    }
+    return 0;
+}
+//simulates the process
+int simulation(int width, int height, char** board){
+    int i = 0;
+    int alives = aliveCellCount(width, height, board);
+    printf("\n alive cells: %d\n",alives);
+    printBoard(width, height, board);
+    while(alives > 0 && i<20){
+        nextBoard(width,height,board);
+        alives = aliveCellCount(width, height, board);
+        printBoard(width, height, board);
+        addToArchive(width, height, board);
+        printf("\n alive cells: %d\n",alives);
+        i++;
+    }
+    return 0;
+}
 
-// void draw_bar()
-// {
-//   hidemouseptr();
-//   setfillstyle(SOLID_FILL,CYAN);
-//   bar(190,180,450,350);
-//   showmouseptr();
-// }
+int main(){
+    int width, height;
+    char **board;
 
-// void draw_button(int x, int y)
-// {
-//   hidemouseptr();
-//   setfillstyle(SOLID_FILL,MAGENTA);
-//   bar(x,y,x+100,y+30);
-//   moveto(x+5,y);
-//   setcolor(YELLOW);
-//   outtext("Press me");
-//   showmouseptr();
-// }
+    //show user the main rules
+    displayRules();
+    //ask for instructions
+    boardType instruction= instructions(&width, &height);
+    board = (char**)malloc(height*sizeof(char*));
+    for(int i = 0; i<height; i++){
+        board[i] = (char*)malloc(width*sizeof(char));
+    }
+    //fill in the board according to these instructions
+    fillBoard(width, height, board, instruction);
+    //simulate life
+    simulation(width, height, board);
 
-// void draw()
-// {
-//   settextstyle(SANS_SERIF_FONT,HORIZ_DIR,2);
-//   outtextxy(155,451,"<a href="http://www.programmingsimplified.com"">www.programmingsimplified.com"</a>);
-//   setcolor(BLUE);
-//   rectangle(0,0,639,450);
-//   setcolor(RED);
-//   outtextxy(160,25,"Try to press the \"Press me\" button");
-//   outtextxy(210,50,"Press escape key to exit");
-//   setfillstyle(XHATCH_FILL,GREEN);
-//   setcolor(BLUE);
-//   bar(1,1,75,449);
-//   bar(565,1,638,449);
-//   showmouseptr();
-//   draw_bar();
-//   draw_button(left,top);
-// }
-
-// void initialize()
-// {
-//   initialize_graphics_mode();
-
-//   if( !initmouse() )
-//   {
-//     closegraph();
-//     printf("Unable to initialize the mouse");
-//     printf("Press any key to exit...\n");
-//     getch();
-//     exit(EXIT_SUCCESS);
-//   }
-
-//   draw();
-// }
-
-// int initmouse()
-// {
-//   i.x.ax = 0;
-//   int86(0x33, &i, &o);
-//   return ( o.x.ax );
-// }
-
-// void get_input()
-// {
-//   int x, y;
-
-//   while(1)
-//   {
-//     getmousepos(&x,&y);
-
-//     /* mouse pointer in left of button */
-
-//     if( x >= (left-3) && y >= (top-3) && y <= (top+30+3) && x < left )
-//     {
-//       draw_bar();
-//       left = left + 4;
-
-//       if (left > 350)
-//         left = 190;
-
-//       draw_button(left,top);
-//     }
-
-//     /* mouse pointer in right of button */
-
-//     else if (x<=(left+100+3)&&y>=(top-3)&&y<=(top+30+3)&&x>(left+100))
-//     {
-//       draw_bar();
-//       left = left - 4;
-
-//       if (left < 190)
-//         left = 350;
-
-//       draw_button(left,top);
-//     }
-
-//     /* mouse pointer above button */
-
-//     else if(x>(left-3) && y>=(top-3) && y<(top) && x<= (left+100+3))
-//     {
-//       draw_bar();
-//       top = top + 4;
-
-//       if (top > 320)
-//         top = 180;
-
-//       draw_button(left,top);
-//     }
-
-//     /* mouse pointer below button */
-
-//     else if (x>(left-3)&&y>(top+30)&&y<=(top+30+3)&&x<=(left+100+3))
-//     {
-//       draw_bar();
-//       top = top - 4;
-
-//       if (top < 180)
-//         top = 320;
-
-//       draw_button(left,top);
-//     }
-
-//     if (kbhit())
-//     {
-//       if (getkey() == 1)
-//         exit(EXIT_SUCCESS);
-//     }
-//   }
-// }
-
-// int getkey()
-// {
-//   i.h.ah = 0;
-//   int86(22, &i, &o);
-
-//   return( o.h.ah );
-// }
-
-// int main()
-// {
-//   char sstr[100];
-//   gets(sstr);
-//   printf("%s",sstr);
-//   return 0;
-// }
+    //clear the memory 
+    for(int i=0; i<height; i++){
+        free(board[i]);
+    }
+    free(board);
+    return 0;
+}
