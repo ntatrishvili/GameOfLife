@@ -19,6 +19,41 @@ typedef enum endInstruction {
     ErrorInstruction
 } endInstruction;
 
+int fillBoardRandom(int width, int height, char** arr);
+int fillBoardFromFile(int width, int height, char** arr, FILE *fp);
+void printBoard(int width, int height, char**board);
+int saveBoardInFile(int width, int height, char** board, FILE *fp);
+
+
+char CellNextState(char current, int neighbourCount);
+void nextBoard(int width, int height, char** board);
+int aliveCellCount(int width, int height, char** board);
+int addToArchive(int width, int height, char** board);
+
+void displayRules();
+boardType ChooseStartInstructions(int *width, int* height);
+int fillBoard(int width, int height, char** board, boardType instruction);
+int simulation(int width, int height, char** board);
+
+void gameOfLife();
+
+endInstruction chooseExitInstructions();
+void printMaxBoard();
+void printCycle();
+void showStatistics();
+
+void invalidInstructionError();
+int main(){
+    //input instructions and simulate LIFE
+    gameOfLife();
+    
+    //Show statistics and info
+    showStatistics();
+
+    return 0;
+}
+
+
 ///THESE ARE THE SMALL HELPER FUNCTIONS FOR READING THE INSTRUCTIONS AND THE SIMULATION
 //randomizes the board
 int fillBoardRandom(int width, int height, char** arr){
@@ -145,10 +180,10 @@ int aliveCellCount(int width, int height, char** board){
 int addToArchive(int width, int height, char** board){
     FILE *fp;
     fp = fopen("archive.txt", "a");
-        if(fp== NULL){
-            printf("action could not be saved!!");
-            return 0;
-        }
+    if(fp== NULL){
+        printf("action could not be saved!!");
+        return 0;
+    }
     
     int status = 1; 
     fputc('\n', fp);
@@ -181,7 +216,7 @@ void displayRules(){
     printf("Then follow these instructions. \n\n\n");
 }
 //asks the user for the instructions
-boardType StartInstructions(int *width, int* height){
+boardType ChooseStartInstructions(int *width, int* height){
     char c;
     printf("First, input the size of the world, that your cells live in (width,height) : ");
     scanf("(%d,%d)", width, height);
@@ -218,6 +253,10 @@ int fillBoard(int width, int height, char** board, boardType instruction){
 int simulation(int width, int height, char** board){
     int i = 0;
     time_t start, end;
+    //to clear the old archives
+    FILE *fp;
+    fp = fopen("archive.txt", "w");
+    fclose(fp);
     int alives = aliveCellCount(width, height, board);
     while(alives > 0 && i<20){
         printBoard(width, height, board);
@@ -232,7 +271,6 @@ int simulation(int width, int height, char** board){
 }
 
 
-
 //reading the instructions and simulating the Game of Life
 void gameOfLife(){
     int width, height;
@@ -241,7 +279,7 @@ void gameOfLife(){
     //show user the main rules
     displayRules();
     //ask for instructions
-    boardType instruction= StartInstructions(&width, &height);
+    boardType instruction= ChooseStartInstructions(&width, &height);
     board = (char**)malloc(height*sizeof(char*));
     for(int i = 0; i<height; i++){
         board[i] = (char*)malloc(width*sizeof(char));
@@ -259,9 +297,10 @@ void gameOfLife(){
     free(board);
 }
 
+
 ///THESE ARE THE SMALL HELPER FUNCTIONS FOR DISPLAYING THE STATISTICS
 //exit Menu
-endInstruction exitInstructions(){
+endInstruction chooseExitInstructions(){
     int menuCode;
     printf("\n\nPhew... This was your simulation! \nNow, What do you want to do with this information? Press the corresponding key. ");
     printf("\nPress 1 to view the board with the most alive cells");
@@ -284,31 +323,23 @@ void printMaxBoard(){
 void printCycle(){
 
 }
-
 //SHOWING THE STATISTICS OF THE GAME
 void showStatistics(){
     int MenuCode;
-    endInstruction inst = exitInstructions();
+    endInstruction inst = chooseExitInstructions();
     while (inst != exitGame){
         switch (inst){
             case 0: return;
             case 1: printMaxBoard(); break;
             case 2: printCycle(); break;
-            case 3: /*invalidInstructionError();*/break;
+            case 3: invalidInstructionError();break;
             default: break;
         }
-        inst = exitInstructions();
+        inst = chooseExitInstructions();
     }
 }
 
 //ERRORHANDLING
-
-int main(){
-    //input instructions and simulate LIFE
-    gameOfLife();
-    
-    //Show statistics and info
-    showStatistics();
-
-    return 0;
+void invalidInstructionError(){
+    //todo
 }
