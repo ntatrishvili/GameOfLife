@@ -1,5 +1,8 @@
 #include<stdio.h>
 #include <stdlib.h>
+#include<time.h>
+//#include <unistd.h> //for sleep in Linux
+//#include<dos.h> //for sleep in Windows
 
 //the board can be random or read from the file (specification 2.2)
 typedef enum boardType {
@@ -8,6 +11,15 @@ typedef enum boardType {
     Error
 } boardType;
 
+//the user can choose one of three kinds of instructions in the exit menu
+typedef enum endInstruction {
+    exitGame,
+    showMax,
+    showCycle,
+    ErrorInstruction
+} endInstruction;
+
+///THESE ARE THE SMALL HELPER FUNCTIONS FOR READING THE INSTRUCTIONS AND THE SIMULATION
 //randomizes the board
 int fillBoardRandom(int width, int height, char** arr){
     srand(time(NULL));
@@ -98,6 +110,14 @@ void nextBoard(int width, int height, char** board){
     
     for(int i = 0; i<height; i++){
         for(int j = 0; j<width; j++){
+            if(i>0 && j>0)
+                neighbourCount += board[i-1][j-1] == '@';
+            if(i<(height-1) && j<(width-1))
+                neighbourCount += board[i+1][j+1] == '@';
+            if(i>0 && j<(width-1))
+                neighbourCount += board[i-1][j+1] == '@';
+            if(i<(height-1) && j>0)
+                neighbourCount += board[i+1][j-1] == '@';
             if (i>0)
                 neighbourCount += board[i-1][j] == '@';
             if (j>0)
@@ -146,7 +166,7 @@ int addToArchive(int width, int height, char** board){
 }
 
 
-
+///THESE ARE THE BIG HELPER FUNCTIONS FOR READING THE INSTRUCTIONS AND THE SIMULATION
 //displays the main rules in the console
 void displayRules(){
     printf("Welcome to the two-dimentional world of the Game of Life!!\n");
@@ -160,9 +180,8 @@ void displayRules(){
     printf("So, are you ready to explore the wonderous world of the game of life?\n");
     printf("Then follow these instructions. \n\n\n");
 }
-
 //asks the user for the instructions
-boardType instructions(int *width, int* height){
+boardType StartInstructions(int *width, int* height){
     char c;
     printf("First, input the size of the world, that your cells live in (width,height) : ");
     scanf("(%d,%d)", width, height);
@@ -198,28 +217,31 @@ int fillBoard(int width, int height, char** board, boardType instruction){
 //simulates the process
 int simulation(int width, int height, char** board){
     int i = 0;
+    time_t start, end;
     int alives = aliveCellCount(width, height, board);
-    printf("\n alive cells: %d\n",alives);
-    printBoard(width, height, board);
     while(alives > 0 && i<20){
-        nextBoard(width,height,board);
-        alives = aliveCellCount(width, height, board);
         printBoard(width, height, board);
         addToArchive(width, height, board);
         printf("\n alive cells: %d\n",alives);
+        sleep(1);
+        nextBoard(width,height,board);
+        alives = aliveCellCount(width, height, board);
         i++;
     }
     return 0;
 }
 
-int main(){
+
+
+//reading the instructions and simulating the Game of Life
+void gameOfLife(){
     int width, height;
     char **board;
 
     //show user the main rules
     displayRules();
     //ask for instructions
-    boardType instruction= instructions(&width, &height);
+    boardType instruction= StartInstructions(&width, &height);
     board = (char**)malloc(height*sizeof(char*));
     for(int i = 0; i<height; i++){
         board[i] = (char*)malloc(width*sizeof(char));
@@ -229,10 +251,64 @@ int main(){
     //simulate life
     simulation(width, height, board);
 
-    //clear the memory 
+
+    //clear the memory
     for(int i=0; i<height; i++){
         free(board[i]);
     }
     free(board);
+}
+
+///THESE ARE THE SMALL HELPER FUNCTIONS FOR DISPLAYING THE STATISTICS
+//exit Menu
+endInstruction exitInstructions(){
+    int menuCode;
+    printf("\n\nPhew... This was your simulation! \nNow, What do you want to do with this information? Press the corresponding key. ");
+    printf("\nPress 1 to view the board with the most alive cells");
+    printf("\nPress 2 to see a cycle in your simulation, if there was one!");
+    printf("\nPress 0 to exit\n");
+    scanf("%d", &menuCode);
+    switch (menuCode){
+        case 0: return exitGame; break;
+        case 1: return showMax; break;
+        case 2: return showCycle; break;
+        default: return ErrorInstruction;
+    }
+    return ErrorInstruction;
+}
+//prints the board with the maximal number of Alive Cells
+void printMaxBoard(){
+
+}
+//prints the boards with the cycle
+void printCycle(){
+
+}
+
+//SHOWING THE STATISTICS OF THE GAME
+void showStatistics(){
+    int MenuCode;
+    endInstruction inst = exitInstructions();
+    while (inst != exitGame){
+        switch (inst){
+            case 0: return;
+            case 1: printMaxBoard(); break;
+            case 2: printCycle(); break;
+            case 3: /*invalidInstructionError();*/break;
+            default: break;
+        }
+        inst = exitInstructions();
+    }
+}
+
+//ERRORHANDLING
+
+int main(){
+    //input instructions and simulate LIFE
+    gameOfLife();
+    
+    //Show statistics and info
+    showStatistics();
+
     return 0;
 }
