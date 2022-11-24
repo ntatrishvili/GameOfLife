@@ -200,6 +200,52 @@ int addToArchive(int width, int height, char** board){
     return 0;
 }
 
+//clears the maxAlives.txt document and adds the new board
+int addToMaxAlives(int width, int height, char** board){
+    FILE *fp;
+    fp = fopen("maxAlives.txt", "w");
+    if(fp== NULL){
+        printf("action could not be saved!!");
+        return 0;
+    }
+    
+    int status = 1; 
+    fputc('\n', fp);
+    for(int i = 0; i<height; i++){
+        for(int j = 0; j<width; j++){
+            fputc(board[i][j], fp);
+        }
+        fputc('\n', fp);
+    }
+
+    status = fclose(fp);
+    if(status != 0)
+        return 1;
+    return 0;
+}
+//appends the table to the maxAlives Document
+int appendToMaxAlives(int width, int height, char** board){
+    FILE *fp;
+    fp = fopen("maxAlives.txt", "a");
+    if(fp== NULL){
+        printf("action could not be saved!!");
+        return 0;
+    }
+    
+    int status = 1; 
+    fputc('\n', fp);
+    for(int i = 0; i<height; i++){
+        for(int j = 0; j<width; j++){
+            fputc(board[i][j], fp);
+        }
+        fputc('\n', fp);
+    }
+
+    status = fclose(fp);
+    if(status != 0)
+        return 1;
+    return 0;
+}
 
 ///THESE ARE THE BIG HELPER FUNCTIONS FOR READING THE INSTRUCTIONS AND THE SIMULATION
 //displays the main rules in the console
@@ -214,6 +260,10 @@ void displayRules(){
     printf("As a three-dimentional being, you can observe their life by looking at their plane of existance step-by-step.\n");
     printf("So, are you ready to explore the wonderous world of the game of life?\n");
     printf("Then follow these instructions. \n\n\n");
+}
+//detects the cycle
+int cycleDetected(){
+    return 0;
 }
 //asks the user for the instructions
 boardType ChooseStartInstructions(int *width, int* height){
@@ -245,22 +295,29 @@ int fillBoard(int width, int height, char** board, boardType instruction){
         fillBoardRandom(width, height, board);
         fp = fopen("input_board.txt", "w");
         saveBoardInFile(width, height, board, fp);
-        printBoard(width, height, board);
     }
     return 0;
 }
 //simulates the process
 int simulation(int width, int height, char** board){
     int i = 0;
-    time_t start, end;
+    int maxAlives = 0;
     //to clear the old archives
     FILE *fp;
     fp = fopen("archive.txt", "w");
     fclose(fp);
+
     int alives = aliveCellCount(width, height, board);
     while(alives > 0 && i<20){
         printBoard(width, height, board);
         addToArchive(width, height, board);
+        if(alives>maxAlives){
+            maxAlives = alives;
+            addToMaxAlives(width, height, board);
+        }
+        else if (alives == maxAlives && !cycleDetected()){
+            appendToMaxAlives(width, height, board);
+        }
         printf("\n alive cells: %d\n",alives);
         sleep(1);
         nextBoard(width,height,board);
@@ -316,8 +373,27 @@ endInstruction chooseExitInstructions(){
     return ErrorInstruction;
 }
 //prints the board with the maximal number of Alive Cells
-void printMaxBoard(){
+int printMaxBoards(){
+    FILE *fp;
+    fp = fopen("maxAlives.txt", "r");
+    int status = 1;
+    char c = ' ';
+    if(fp== NULL){
+        printf("could not find file, please try again! \n");
+        return 1;
+    }
+    //read
+    c = fgetc(fp);
+    while (c != EOF)
+    {
+        printf ("%c", c);
+        c = fgetc(fp);
+    }
 
+    status = fclose(fp);
+    if(status != 0)
+        return 1;
+    return 0;
 }
 //prints the boards with the cycle
 void printCycle(){
@@ -330,7 +406,7 @@ void showStatistics(){
     while (inst != exitGame){
         switch (inst){
             case 0: return;
-            case 1: printMaxBoard(); break;
+            case 1: printMaxBoards(); break;
             case 2: printCycle(); break;
             case 3: invalidInstructionError();break;
             default: break;
