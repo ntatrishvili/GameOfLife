@@ -4,6 +4,11 @@
 //#include <unistd.h> //for sleep in Linux
 //#include<dos.h> //for sleep in Windows
 
+typedef struct BoardList{
+    char** board;
+    struct BoardList* next;
+}BoardList;
+
 //the board can be random or read from the file (specification 2.2)
 typedef enum boardType {
     ReadFromFile, 
@@ -43,6 +48,7 @@ void printCycle();
 void showStatistics();
 
 void invalidInstructionError();
+
 int main(){
     //input instructions and simulate LIFE
     gameOfLife();
@@ -298,10 +304,32 @@ int fillBoard(int width, int height, char** board, boardType instruction){
     }
     return 0;
 }
+//adds board to the board list
+void addToBoardList(char** board, BoardList* head){
+    BoardList* node, *temp;
+    node = (BoardList*)malloc(sizeof(BoardList));
+    node->board = board;
+    while(temp->next !=NULL){
+        temp = temp->next;
+    }
+    temp->next = node;
+    node->next = NULL;
+}
+//frees the boardList
+void freeBoardList(BoardList* head){
+    BoardList* temp, *nxt;
+    while(temp!=NULL){
+        BoardList* nxt = temp->next;
+        free(temp);
+        temp = nxt;
+    }
+}
 //simulates the process
 int simulation(int width, int height, char** board){
     int i = 0;
     int maxAlives = 0;
+    BoardList *head;
+    head = (BoardList*)malloc(sizeof(BoardList));
     //to clear the old archives
     FILE *fp;
     fp = fopen("archive.txt", "w");
@@ -310,6 +338,7 @@ int simulation(int width, int height, char** board){
     int alives = aliveCellCount(width, height, board);
     while(alives > 0 && i<20){
         printBoard(width, height, board);
+        addToBoardList(board, head);
         addToArchive(width, height, board);
         if(alives>maxAlives){
             maxAlives = alives;
@@ -324,6 +353,7 @@ int simulation(int width, int height, char** board){
         alives = aliveCellCount(width, height, board);
         i++;
     }
+    freeBoardList(head);
     return 0;
 }
 
@@ -408,7 +438,7 @@ void showStatistics(){
             case 0: return;
             case 1: printMaxBoards(); break;
             case 2: printCycle(); break;
-            case 3: invalidInstructionError();break;
+            case 3: invalidInstructionError(); break;
             default: break;
         }
         inst = chooseExitInstructions();
@@ -417,5 +447,5 @@ void showStatistics(){
 
 //ERRORHANDLING
 void invalidInstructionError(){
-    //todo
+    printf("The instruction is not valid, please try again!\n");
 }
