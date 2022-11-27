@@ -1,261 +1,202 @@
-#include<stdio.h>
+#include <stdio.h>
 #include <stdlib.h>
-#include<time.h>
-//#include <unistd.h> //for sleep in Linux
-//#include<dos.h> //for sleep in Windows
+#include <time.h>
 
-typedef struct BoardList{
-    char** board;
-    struct BoardList* next;
-}BoardList;
-
-//the board can be random or read from the file (specification 2.2)
-typedef enum boardType {
-    ReadFromFile, 
+// the board can be random or read from the file (specification 2.2)
+typedef enum boardType
+{
+    ReadFromFile,
     Randomized,
     Error
 } boardType;
 
-//the user can choose one of three kinds of instructions in the exit menu
-typedef enum endInstruction {
-    exitGame,
-    showMax,
-    showCycle,
-    ErrorInstruction
-} endInstruction;
+typedef struct Board
+{
+    int width;
+    int height;
+    char **grid;
+} Board;
 
-int fillBoardRandom(int width, int height, char** arr);
-int fillBoardFromFile(int width, int height, char** arr, FILE *fp);
-void printBoard(int width, int height, char**board);
-int saveBoardInFile(int width, int height, char** board, FILE *fp);
-
-
-char CellNextState(char current, int neighbourCount);
-void nextBoard(int width, int height, char** board);
-int aliveCellCount(int width, int height, char** board);
-int addToArchive(int width, int height, char** board);
-
-void displayRules();
-boardType ChooseStartInstructions(int *width, int* height);
-int fillBoard(int width, int height, char** board, boardType instruction);
-int simulation(int width, int height, char** board);
-
-void gameOfLife();
-
-endInstruction chooseExitInstructions();
-void printMaxBoard();
-void printCycle();
-void showStatistics();
-
-void invalidInstructionError();
-
-int main(){
-    //input instructions and simulate LIFE
-    gameOfLife();
-    
-    //Show statistics and info
-    showStatistics();
-
-    return 0;
-}
+typedef struct BoardList
+{
+    Board *board;
+    struct BoardList *next;
+} BoardList;
 
 
-///THESE ARE THE SMALL HELPER FUNCTIONS FOR READING THE INSTRUCTIONS AND THE SIMULATION
-//randomizes the board
-int fillBoardRandom(int width, int height, char** arr){
+/// THESE ARE THE SMALL HELPER FUNCTIONS FOR READING THE INSTRUCTIONS AND THE SIMULATION
+// randomizes the board
+void fillBoardRandom(Board *board)
+{
     srand(time(NULL));
     int r = rand();
-    for(int i = 0; i<height; i++){
-        for(int j = 0; j<width; j++){
-            if(r%3!=0){
-                arr[i][j] = ' ';
-                printf("%c",arr[i][j]);
+    for (int i = 0; i < board->height; i++)
+    {
+        for (int j = 0; j < board->width; j++)
+        {
+            if (r % 7 != 0)
+            {
+                (board->grid)[i][j] = ' ';
+                printf("%c", (board->grid)[i][j]);
             }
-            else{
-                arr[i][j] = '@';
+            else
+            {
+                (board->grid)[i][j] = '@';
             }
             r = rand();
         }
     }
-    //TO DO ERRORS
-    if(1<0){
-        return 0;
-    }
-    return 1;
 }
-//inputs the board from the file
-int fillBoardFromFile(int width, int height, char** arr, FILE *fp){
+// inputs the board from the file
+int fillBoardFromFile(Board *board, FILE *fp)
+{
     int status = 1;
     char curr = ' ';
-    if(fp== NULL){
+    if (fp == NULL)
+    {
         printf("could not find file, please try again! \n");
         return 1;
     }
-    //read
-    for(int i = 0; i<height; i++){
-        for(int j = 0; j<width; j++){
+    // read
+    for (int i = 0; i < board->height; i++)
+    {
+        for (int j = 0; j < board->width; j++)
+        {
             curr = fgetc(fp);
-            if(curr == ' ')
-                arr[i][j] = ' ';
-            else if(curr == '@')
-                arr[i][j] = '@';
+            if (curr == ' ')
+                (board->grid)[i][j] = ' ';
+            else if (curr == '@')
+                (board->grid)[i][j] = '@';
             else
                 j--;
-            
         }
     }
     status = fclose(fp);
-    if(status != 0)
+    if (status != 0)
         return 1;
     return 0;
 }
-//prints the board
-void printBoard(int width, int height, char**board){
+// prints the board
+void printBoard(Board *board)
+{
     printf("\n");
-    for (int i = 0; i < width+2; i++){
+    for (int i = 0; i < board->width + 2; i++)
+    {
         printf("-");
     }
     printf("\n");
-    for(int i = 0; i<height; i++){
+    for (int i = 0; i < board->height; i++)
+    {
         printf("|");
-        for(int j = 0; j<width; j++){
-            printf("%c", board[i][j]);
+        for (int j = 0; j < board->width; j++)
+        {
+            if ((board->grid)[i][j] == ' ')
+            {
+                printf(" ");
+            }
+            else if ((board->grid)[i][j] == '@')
+            {
+                printf("▓");
+            }
         }
         printf("|\n");
     }
-    for (int i = 0; i < width+2; i++){
+    for (int i = 0; i < board->width + 2; i++)
+    {
         printf("-");
     }
 }
-//saves current board to the file
-int saveBoardInFile(int width, int height, char** board, FILE *fp){
-    int status = 1; 
-    for(int i = 0; i<height; i++){
-        for(int j = 0; j<width; j++){
-            fputc(board[i][j], fp);
+// saves current board to the file
+int saveBoardInFile(Board *board, FILE *fp)
+{
+    if (fp == NULL)
+    {
+        printf("action could not be saved!!");
+        return 0;
+    }
+    int status = 1;
+    for (int i = 0; i < board->height; i++)
+    {
+        for (int j = 0; j < board->width; j++)
+        {
+            fputc((board->grid)[i][j], fp);
         }
         fputc('\n', fp);
     }
+    fputc('\n', fp);
     status = fclose(fp);
-    if(status != 0)
+    if (status != 0)
         return 1;
     return 0;
 }
-//calculates the next state of the cell
-char CellNextState(char current, int neighbourCount){
+// calculates the next state of the cell
+char CellNextState(char current, int neighbourCount)
+{
     return ((neighbourCount == 2 && current == '@') || neighbourCount == 3) ? '@' : ' ';
 }
-//moves on to the next state
-void nextBoard(int width, int height, char** board){
+// moves on to the next state
+void nextBoard(Board *board)
+{
     int neighbourCount = 0;
-    
-    for(int i = 0; i<height; i++){
-        for(int j = 0; j<width; j++){
-            if(i>0 && j>0)
-                neighbourCount += board[i-1][j-1] == '@';
-            if(i<(height-1) && j<(width-1))
-                neighbourCount += board[i+1][j+1] == '@';
-            if(i>0 && j<(width-1))
-                neighbourCount += board[i-1][j+1] == '@';
-            if(i<(height-1) && j>0)
-                neighbourCount += board[i+1][j-1] == '@';
-            if (i>0)
-                neighbourCount += board[i-1][j] == '@';
-            if (j>0)
-                neighbourCount += board[i][j-1] == '@';
-            if(i<(height-1))
-                neighbourCount += board[i+1][j] == '@';
-            if(j<(width-1))
-                neighbourCount += board[i][j+1] == '@';
-            board[i][j] = CellNextState(board[i][j], neighbourCount);
+    // making a temporary board to store next states
+    Board *temp;
+    temp = (Board *)malloc(sizeof(Board));
+    temp->grid = (char **)malloc((board->height) * sizeof(char *));
+    for (int i = 0; i < board->height; i++)
+    {
+        (temp->grid)[i] = (char *)malloc(board->width * sizeof(char *));
+    }
+
+    for (int i = 0; i < board->height; i++)
+    {
+        for (int j = 0; j < board->width; j++)
+        {
+            if (i > 0 && j > 0)
+                neighbourCount += (board->grid)[i - 1][j - 1] == '@';
+            if (i < (board->height - 1) && j < (board->width - 1))
+                neighbourCount += (board->grid)[i + 1][j + 1] == '@';
+            if (i > 0 && j < (board->width - 1))
+                neighbourCount += (board->grid)[i - 1][j + 1] == '@';
+            if (i < (board->height - 1) && j > 0)
+                neighbourCount += (board->grid)[i + 1][j - 1] == '@';
+            if (i > 0)
+                neighbourCount += (board->grid)[i - 1][j] == '@';
+            if (j > 0)
+                neighbourCount += (board->grid)[i][j - 1] == '@';
+            if (i < (board->height - 1))
+                neighbourCount += (board->grid)[i + 1][j] == '@';
+            if (j < (board->width - 1))
+                neighbourCount += (board->grid)[i][j + 1] == '@';
+            (temp->grid)[i][j] = CellNextState((board->grid)[i][j], neighbourCount);
             neighbourCount = 0;
         }
     }
+    for (int i = 0; i < board->height; i++)
+    {
+        for (int j = 0; j < board->width; j++)
+        {
+            (board->grid)[i][j] = (temp->grid)[i][j];
+        }
+    }
 }
-//counts the cells that are alive
-int aliveCellCount(int width, int height, char** board){
+// counts the cells that are alive
+int aliveCellCount(Board *board)
+{
     int aliveCellsCount = 0;
-    for(int i = 0; i<height; i++){
-        for(int j = 0; j<width; j++){
-            aliveCellsCount += (board[i][j] == '@');
+    for (int i = 0; i < board->height; i++)
+    {
+        for (int j = 0; j < board->width; j++)
+        {
+            aliveCellsCount += ((board->grid)[i][j] == '@');
         }
     }
     return aliveCellsCount;
 }
-//appends the current board to the archive file
-int addToArchive(int width, int height, char** board){
-    FILE *fp;
-    fp = fopen("archive.txt", "a");
-    if(fp== NULL){
-        printf("action could not be saved!!");
-        return 0;
-    }
-    
-    int status = 1; 
-    fputc('\n', fp);
-    for(int i = 0; i<height; i++){
-        for(int j = 0; j<width; j++){
-            fputc(board[i][j], fp);
-        }
-        fputc('\n', fp);
-    }
 
-    status = fclose(fp);
-    if(status != 0)
-        return 1;
-    return 0;
-}
-
-//clears the maxAlives.txt document and adds the new board
-int addToMaxAlives(int width, int height, char** board){
-    FILE *fp;
-    fp = fopen("maxAlives.txt", "w");
-    if(fp== NULL){
-        printf("action could not be saved!!");
-        return 0;
-    }
-    
-    int status = 1; 
-    fputc('\n', fp);
-    for(int i = 0; i<height; i++){
-        for(int j = 0; j<width; j++){
-            fputc(board[i][j], fp);
-        }
-        fputc('\n', fp);
-    }
-
-    status = fclose(fp);
-    if(status != 0)
-        return 1;
-    return 0;
-}
-//appends the table to the maxAlives Document
-int appendToMaxAlives(int width, int height, char** board){
-    FILE *fp;
-    fp = fopen("maxAlives.txt", "a");
-    if(fp== NULL){
-        printf("action could not be saved!!");
-        return 0;
-    }
-    
-    int status = 1; 
-    fputc('\n', fp);
-    for(int i = 0; i<height; i++){
-        for(int j = 0; j<width; j++){
-            fputc(board[i][j], fp);
-        }
-        fputc('\n', fp);
-    }
-
-    status = fclose(fp);
-    if(status != 0)
-        return 1;
-    return 0;
-}
-
-///THESE ARE THE BIG HELPER FUNCTIONS FOR READING THE INSTRUCTIONS AND THE SIMULATION
-//displays the main rules in the console
-void displayRules(){
+/// THESE ARE THE BIG HELPER FUNCTIONS FOR READING THE INSTRUCTIONS AND THE SIMULATION
+// displays the main rules in the console
+void displayRules()
+{
     printf("Welcome to the two-dimentional world of the Game of Life!!\n");
     printf("Here, small creatures called \'cells\' live neighbouring each other\n");
     printf("They might look simple, but they are just like you in social situations!\n");
@@ -267,185 +208,301 @@ void displayRules(){
     printf("So, are you ready to explore the wonderous world of the game of life?\n");
     printf("Then follow these instructions. \n\n\n");
 }
-//detects the cycle
-int cycleDetected(){
-    return 0;
+// compares the boards
+int boardsAreEqual(Board *board1, Board *board2)
+{
+    if (board1->width != board2->width || board1->height != board2->height || aliveCellCount(board1) != aliveCellCount(board2))
+    {
+        return 0;
+    }
+    for (int i = 0; i < board1->height; i++)
+    {
+        for (int j = 0; j < board1->width; j++)
+        {
+            if ((board1->grid)[i][j] != (board2->grid)[i][j])
+            {
+                return 0;
+            }
+        }
+    }
+    return 1;
 }
-//asks the user for the instructions
-boardType ChooseStartInstructions(int *width, int* height){
+// detects the cycle (if it exists) returns the size and writes it in a file
+int cycleDetected(BoardList *head, Board *currentBoard)
+{
+    int len = 0;
+    BoardList *lst = head;
+    while (lst->next != NULL)
+    {
+        if (boardsAreEqual(lst->board, currentBoard))
+        {
+            printBoard(lst->board);
+            printBoard(currentBoard);
+            // save the whole cycle in the cycle.txt file
+            FILE *fp;
+            while (lst->next!= NULL)
+            {
+                len++;
+                fp = fopen("cycle.txt", "a");
+                saveBoardInFile(lst->board, fp);
+                lst = lst->next;
+            }
+            fp = fopen("cycle.txt", "a");
+            fprintf(fp, "the length of this cycle was %d", len);
+            fclose(fp);
+            return len;
+        }
+        lst = lst->next;
+    }
+    return len;
+}
+// asks the user for the instructions
+boardType ChooseStartInstructions(Board *board)
+{
+    int a, b;
     char c;
     printf("First, input the size of the world, that your cells live in (width,height) : ");
-    scanf("(%d,%d)", width, height);
+    if (scanf(" (%d,%d)", &a, &b) == 0){
+        return Error;
+    }
+    board->width = a;
+    board->height = b;
     printf("\nThen, write F if you have already prepared the initial state of your cells in the File, or write R if you want to view a random Game of Life: ");
     scanf(" %c", &c);
-    // if(c=='F' || c=='f'){
-    //     printf("please make sure your board")
-    // }
-    return (c=='F'|| c=='f') ? ReadFromFile : (c=='R' || c=='r') ? Randomized : Error;
+    return (c == 'F' || c == 'f') ? ReadFromFile : (c == 'R' || c == 'r') ? Randomized
+                                                                          : Error;
 }
-//fill the board according to the instructions
-int fillBoard(int width, int height, char** board, boardType instruction){
+// fill the board according to the instructions
+int fillBoard(Board *board, boardType instruction)
+{
     FILE *fp;
-    if (instruction == ReadFromFile){
+    if (instruction == ReadFromFile)
+    {
         fp = fopen("input_board.txt", "r");
-        if(fp== NULL){
+        if (fp == NULL)
+        {
             printf("could not read from the file, please make sure you have correctly inputed the board!");
             return 0;
         }
         printf("The board read from your file: \n");
-        fillBoardFromFile(width, height, board, fp);
-
+        fillBoardFromFile(board, fp);
     }
-    else if(instruction == Randomized){
+    else if (instruction == Randomized)
+    {
         printf("The randomized world:\n");
-        fillBoardRandom(width, height, board);
+        fillBoardRandom(board);
         fp = fopen("input_board.txt", "w");
-        saveBoardInFile(width, height, board, fp);
+        saveBoardInFile(board, fp);
     }
-    return 0;
+    return 1;
 }
-//adds board to the board list
-void addToBoardList(char** board, BoardList* head){
-    BoardList* node, *temp;
-    node = (BoardList*)malloc(sizeof(BoardList));
-    node->board = board;
-    while(temp->next !=NULL){
-        temp = temp->next;
+// adds board to the board list
+void addBoardToList(Board *newBoard, BoardList *head)
+{
+    BoardList *node;
+    node = (BoardList *)malloc(sizeof(BoardList));
+    node->board = (Board *)malloc(sizeof(Board));
+    node->board->grid = (char **)malloc(newBoard->height * sizeof(char *));
+    for (int i = 0; i < newBoard->height; i++)
+    {
+        (node->board->grid)[i] = (char *)malloc(newBoard->width * sizeof(char));
     }
-    temp->next = node;
+    node->board = newBoard;
     node->next = NULL;
+    BoardList *curr = head;
+    while (curr != NULL && curr->next != NULL)
+    {
+        curr = curr->next;
+    }
+    if(curr!=NULL){
+        curr->next = node;
+    }
+    else{
+        *head = *node;
+        head->next = NULL;
+    }
 }
-//frees the boardList
-void freeBoardList(BoardList* head){
-    BoardList* temp, *nxt;
-    while(temp!=NULL){
-        BoardList* nxt = temp->next;
+// frees the boardList
+void freeBoardList(BoardList *head)
+{
+    BoardList *temp;
+    BoardList *nxt;
+    temp = head;
+    while (temp!=NULL)
+    {
+        nxt = temp->next;
+        free(temp->board->grid);
+        free(temp->board);
         free(temp);
         temp = nxt;
     }
 }
-//simulates the process
-int simulation(int width, int height, char** board){
-    int i = 0;
-    int maxAlives = 0;
+
+// simulates the process
+int simulation(Board *board)
+{
+    int i = 0, maxAlives = 0, cycle = 0;
     BoardList *head;
-    head = (BoardList*)malloc(sizeof(BoardList));
-    //to clear the old archives
+    head = (BoardList *)malloc(sizeof(BoardList));
+    head->board = (Board *)malloc(sizeof(Board));
+    head->board->grid = (char **)malloc(board->height * sizeof(char *));
+    for (int i = 0; i < board->height; i++)
+    {
+        (head->board->grid)[i] = (char *)malloc(board->width * sizeof(char));
+    }
+    // to clear the old archives
     FILE *fp;
     fp = fopen("archive.txt", "w");
     fclose(fp);
+    fp = fopen("cycle.txt", "w");
+    fclose(fp);
 
-    int alives = aliveCellCount(width, height, board);
-    while(alives > 0 && i<20){
-        printBoard(width, height, board);
-        addToBoardList(board, head);
-        addToArchive(width, height, board);
-        if(alives>maxAlives){
+    int alives = aliveCellCount(board);
+    while (i < 20)
+    {
+        //addBoardToList(board, head);
+        if(head->next!=NULL){
+        }
+        printBoard(board);
+        fp = fopen("archive.txt", "a");
+        saveBoardInFile(board, fp);
+        if (alives > maxAlives)
+        {
             maxAlives = alives;
-            addToMaxAlives(width, height, board);
+            fp = fopen("maxAlives.txt", "w");
+            saveBoardInFile(board, fp);
         }
-        else if (alives == maxAlives && !cycleDetected()){
-            appendToMaxAlives(width, height, board);
+        // else if (alives == maxAlives && !cycleDetected(head, board))
+        else if (alives == maxAlives)
+        {
+            fp = fopen("maxAlives.txt", "a");
+            saveBoardInFile(board, fp);
         }
-        printf("\n alive cells: %d\n",alives);
+        printf("\n alive cells: %d\n", alives);
+        // if (cycleDetected(head, board))
+        // {
+        //     freeBoardList(head);
+        //     return 0;
+        // }
         sleep(1);
-        nextBoard(width,height,board);
-        alives = aliveCellCount(width, height, board);
+        nextBoard(board);
+        alives = aliveCellCount(board);
         i++;
     }
-    freeBoardList(head);
-    return 0;
+    //freeBoardList(head);
+    return cycle;
 }
 
-
-//reading the instructions and simulating the Game of Life
-void gameOfLife(){
-    int width, height;
-    char **board;
-
-    //show user the main rules
+// reading the instructions and simulating the Game of Life
+int gameOfLife()
+{
+    Board *board;
+    board = (Board *)malloc(sizeof(Board));
+    // show user the main rules
     displayRules();
-    //ask for instructions
-    boardType instruction= ChooseStartInstructions(&width, &height);
-    board = (char**)malloc(height*sizeof(char*));
-    for(int i = 0; i<height; i++){
-        board[i] = (char*)malloc(width*sizeof(char));
+    // ask for instructions
+    boardType instruction = ChooseStartInstructions(board);
+    board->grid = (char **)malloc(board->height * sizeof(char *));
+    for (int i = 0; i < board->height; i++)
+    {
+        (board->grid)[i] = (char *)malloc(board->width * sizeof(char));
     }
-    //fill in the board according to these instructions
-    fillBoard(width, height, board, instruction);
-    //simulate life
-    simulation(width, height, board);
+    // fill in the board according to these instructions
+    fillBoard(board, instruction);
+    // simulate life
+    int cycle = simulation(board);
 
-
-    //clear the memory
-    for(int i=0; i<height; i++){
-        free(board[i]);
+    // clear the memory
+    for (int i = 0; i < board->height; i++)
+    {
+        free((board->grid)[i]);
     }
     free(board);
+    return cycle;
 }
 
-
-///THESE ARE THE SMALL HELPER FUNCTIONS FOR DISPLAYING THE STATISTICS
-//exit Menu
-endInstruction chooseExitInstructions(){
-    int menuCode;
-    printf("\n\nPhew... This was your simulation! \nNow, What do you want to do with this information? Press the corresponding key. ");
-    printf("\nPress 1 to view the board with the most alive cells");
-    printf("\nPress 2 to see a cycle in your simulation, if there was one!");
-    printf("\nPress 0 to exit\n");
-    scanf("%d", &menuCode);
-    switch (menuCode){
-        case 0: return exitGame; break;
-        case 1: return showMax; break;
-        case 2: return showCycle; break;
-        default: return ErrorInstruction;
-    }
-    return ErrorInstruction;
-}
-//prints the board with the maximal number of Alive Cells
-int printMaxBoards(){
+/// THESE ARE THE SMALL HELPER FUNCTIONS FOR DISPLAYING THE STATISTICS
+int printFile(char *fileName)
+{
     FILE *fp;
-    fp = fopen("maxAlives.txt", "r");
+    fp = fopen(fileName, "r");
     int status = 1;
     char c = ' ';
-    if(fp== NULL){
+    if (fp == NULL)
+    {
         printf("could not find file, please try again! \n");
         return 1;
     }
-    //read
+
+    // read
     c = fgetc(fp);
     while (c != EOF)
     {
-        printf ("%c", c);
+        if (c == '@')
+        {
+            printf("▓");
+        }
+        else
+        {
+            printf("%c", c);
+        }
         c = fgetc(fp);
     }
 
     status = fclose(fp);
-    if(status != 0)
+    if (status != 0)
         return 1;
     return 0;
 }
-//prints the boards with the cycle
-void printCycle(){
-
-}
-//SHOWING THE STATISTICS OF THE GAME
-void showStatistics(){
-    int MenuCode;
-    endInstruction inst = chooseExitInstructions();
-    while (inst != exitGame){
-        switch (inst){
-            case 0: return;
-            case 1: printMaxBoards(); break;
-            case 2: printCycle(); break;
-            case 3: invalidInstructionError(); break;
-            default: break;
+// SHOWING THE STATISTICS OF THE GAME
+void showStatistics(int cycle)
+{
+    char menuCode = '0';
+    printf("\n\nPhew... This was your simulation! \n");
+    while (1)
+    {
+        printf("Now, What do you want to do with this information? Press the corresponding key. ");
+        printf("\nPress 1 to view the board with the most alive cells");
+        printf("\nPress 2 to see a cycle in your simulation, if there was one!");
+        printf("\nPress 0 to exit\n");
+        scanf(" %c", &menuCode);
+        switch (menuCode)
+        {
+        case '0':
+            return;
+        case '1':
+        {
+            printFile("maxAlives.txt");
+            break;
         }
-        inst = chooseExitInstructions();
+        case '2':
+        {
+            if (cycle)
+            {
+                printFile("cycle.txt");
+            }
+            else
+            {
+                printf("Sorry! There was no cycle in your program\n");
+            }
+            break;
+        }
+        default:
+        {
+            printf("The instruction is not valid, please try again!\n");
+            break;
+        }
+        }
     }
 }
 
-//ERRORHANDLING
-void invalidInstructionError(){
-    printf("The instruction is not valid, please try again!\n");
+int main()
+{
+    // input instructions and simulate LIFE
+    int cycle = gameOfLife();
+
+    // Show statistics and info
+    showStatistics(cycle);
+
+    return 0;
 }
