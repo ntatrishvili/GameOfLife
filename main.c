@@ -177,6 +177,13 @@ void nextBoard(Board *board)
             (board->grid)[i][j] = (temp->grid)[i][j];
         }
     }
+
+    for (int i = 0; i < board->height; i++)
+    {
+        free((temp->grid)[i]);
+    }
+    free(temp->grid);
+    free(temp);
 }
 // counts the cells that are alive
 int aliveCellCount(Board *board)
@@ -314,12 +321,6 @@ void addBoardToList(Board *newBoard, BoardList **head)
     // allocating the memory for the node
     BoardList *node;
     node = (BoardList *)malloc(sizeof(BoardList));
-    node->board = (Board *)malloc(sizeof(Board));
-    node->board->grid = (char **)malloc(newBoard->height * sizeof(char *));
-    for (int i = 0; i < newBoard->height; i++)
-    {
-        (node->board->grid)[i] = (char *)malloc(newBoard->width * sizeof(char));
-    }
     node->board = newBoard;
     node->next = NULL;
     // add the node to the list
